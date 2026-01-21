@@ -18,8 +18,9 @@ A collection of my python scrips for the FL Studio Piano Roll.
 
 ![Updated Velocity Dialog](images/image.png)
 
-Or full size preview:
-![Large Preview](https://github.com/Camburgerhelpers/Advanced-Velocity-Fades-MIDI/raw/main/images/image.png)
+![Large Preview](https://github.com/Camburgerhelpers/Advanced-Velocity-Fades-MIDI/raw/main/images/image1.png)
+
+![Large Preview](https://github.com/Camburgerhelpers/Advanced-Velocity-Fades-MIDI/raw/main/images/image2.png)
 
 ## MIDI 0–127 Edition (Fork by Camburgerhelpers)
 
