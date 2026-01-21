@@ -1,0 +1,98 @@
+from flpianoroll import *
+
+######################################################################
+# Advanced Velocity Fades v1.2 MIDI 0-127 Edition                    #
+# Modified for true integer 0-127 inputs (snaps to whole numbers)    #
+# Original by Wisteria Motif / GitHub: WisteriaMotif                 #
+# Edited by Cameron Farnsworth / GitHub: Camburgerhelpers            #
+# MIDI tweaks for direct 0-127 workflow - no calculator needed       #
+######################################################################
+
+if score.noteCount == 0:
+    Utils.ShowMessage("There are no notes to work with.\r\nYou will get an error message after clicking 'Ok'.\r\nJust close that message and try again... but maybe with notes...")
+
+# Get initial velocities as MIDI 0-127 (rounded)
+init_velocity_L = 64
+init_velocity_R = 100
+L_vel_list = []
+R_vel_list = []
+
+for i in range(score.noteCount):
+    vel_percent = score.getNote(i).velocity
+    vel_midi = round(vel_percent * 127)  # Convert FL internal % to MIDI 0-127
+    if score.getNote(i).time == score.getNote(0).time:
+        L_vel_list.append(vel_midi)
+    if score.getNote(i).time == score.getNote(score.noteCount - 1).time:
+        R_vel_list.append(vel_midi)
+
+if L_vel_list:
+    init_velocity_L = round(sum(L_vel_list) / len(L_vel_list))
+if R_vel_list:
+    init_velocity_R = round(sum(R_vel_list) / len(R_vel_list))
+
+def createDialog():
+    settingsWindow = ScriptDialog(
+        "Advanced Velocity Fades - MIDI 0-127 Integers",
+        "Velocity L/R: Set MIDI values 0-127 for leftmost/rightmost note(s).\r\n"
+        "Dynamic: Overall level multiplier (1 = normal).\r\n"
+        "Dynamic Pinch: Reduces dynamic toward edges.\r\n"
+        "Curve: Adds exponential/linear curve to the fade.\r\n"
+        "Zero Velocity Protection: Prevents notes dropping to silent (below ~1-2 MIDI).\r\n"
+        "- Original by Wisteria Motif\r\n"
+        "- MIDI 0-127 integer tweaks by Camburgerhelpers"
+    )
+    # Use addInputKnobInt for true integer snapping
+    settingsWindow.addInputKnobInt('Velocity L (0-127 MIDI)', init_velocity_L, 0, 127)
+    settingsWindow.addInputKnobInt('Velocity R (0-127 MIDI)', init_velocity_R, 0, 127)
+    settingsWindow.AddInputKnob('Dynamic', 1.0, 0.0, 2.0)
+    settingsWindow.AddInputKnob('Dynamic Pinch', 0.0, -1.0, 1.0)
+    settingsWindow.AddInputKnob('Curve', 0.0, -10.0, 10.0)
+    settingsWindow.AddInputCheckbox("Zero Velo Protect.", True)  # Default on
+    return settingsWindow
+
+def apply(settingsWindow):
+    first_note_position = score.getNote(0).time
+    last_note_position = score.getNote(score.noteCount - 1).time
+
+    # Get user inputs as integers 0-127, convert to 0-1 float
+    vel_l_midi = settingsWindow.GetInputValue('Velocity L (0-127 MIDI)')
+    vel_r_midi = settingsWindow.GetInputValue('Velocity R (0-127 MIDI)')
+    velocity_l = vel_l_midi / 127.0
+    velocity_r = vel_r_midi / 127.0
+    velocity_difference = velocity_r - velocity_l
+
+    for i in range(score.noteCount):
+        note = score.getNote(i)
+        if note.time == first_note_position:
+            percentage = 0.0
+        else:
+            percentage = (note.time - first_note_position) / (last_note_position - first_note_position)
+
+        # Current note as MIDI for offset calculation
+        current_vel_midi = round(note.velocity * 127)
+        init_offset_midi = current_vel_midi - (init_velocity_L + ((init_velocity_R - init_velocity_L) * percentage))
+        initial_velocity_offset = init_offset_midi / 127.0
+
+        if settingsWindow.GetInputValue('Dynamic Pinch') >= 0:
+            pinch_velocity = (initial_velocity_offset - percentage * initial_velocity_offset * settingsWindow.GetInputValue('Dynamic Pinch'))
+        else:
+            pinch_velocity = (initial_velocity_offset - (1 - percentage) * initial_velocity_offset * settingsWindow.GetInputValue('Dynamic Pinch') * -1)
+
+        curve_value = (settingsWindow.GetInputValue('Curve') / 10) ** 3 * 10
+        if settingsWindow.GetInputValue('Curve') >= 0:
+            percentage = percentage ** (curve_value + 1)
+        elif settingsWindow.GetInputValue('Curve') < 0:
+            percentage = percentage - (1 - percentage) ** (curve_value * -1 + 1) - percentage + 1
+
+        calculated_velocity = (velocity_l + (velocity_difference * percentage)) + pinch_velocity * settingsWindow.GetInputValue('Dynamic')
+
+        # Clamp to valid range
+        calculated_velocity = max(0.0, min(1.0, calculated_velocity))
+
+        # Zero protect
+        if calculated_velocity <= 0.008 and settingsWindow.GetInputValue('Zero Velo Protect.'):
+            calculated_velocity = 0.008  # ~ MIDI 1
+
+        note.velocity = calculated_velocity
+
+# Script ends - FL auto-refreshes the piano roll
