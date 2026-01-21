@@ -14,6 +14,13 @@ A collection of my python scrips for the FL Studio Piano Roll.
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+## Updated Screenshot (MIDI 0-127 Dialog)
+
+![Updated Velocity Dialog](images/advanced-velocity-dialog.png)
+
+Or full size preview:
+![Large Preview](https://github.com/Camburgerhelpers/Advanced-Velocity-Fades-MIDI/raw/main/images/advanced-velocity-dialog.png)
+
 ## MIDI 0–127 Edition (Fork by Camburgerhelpers)
 
 This is a tweaked version of the original **Advanced Velocity Fades** script, focused on MIDI workflows.
